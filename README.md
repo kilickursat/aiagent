@@ -165,6 +165,15 @@ We welcome contributions to improve this project! Here's how to get started:
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+**GNU AFFERO GENERAL PUBLIC LICENSE Version 3, 19 November 2007**  
 
+Copyright (C) 2007 Free Software Foundation, Inc.  
+<https://fsf.org/>  
 
+Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.  
+
+### Preamble  
+
+The GNU Affero General Public License is a free, copyleft license for software and other kinds of works, specifically designed to ensure that software remains free and open when it is run on a server.  
+
+When you convey a copy of this program, you ensure that the freedom to modify and share it extends to all who interact with the software. This license guarantees that network use of the program results in sharing its source code with those users.  
