@@ -1,0 +1,10 @@
+flask
+flask-socketio
+pandas
+numpy
+requests
+markdownify
+smolagents
+huggingface_hub
+plotly
+gunicorn
