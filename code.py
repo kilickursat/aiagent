@@ -581,23 +581,9 @@ def initialize_agents():
         st.error(f"Failed to initialize agents: {str(e)}\nFull traceback:\n{traceback.format_exc()}")
         return None, None, None
         
-# Add error handling for chat display
-def display_chat_message(msg):
-    try:
-        role_icon = "🧑" if msg["role"] == "user" else "🤖"
-        content = msg["content"]
-        if isinstance(content, (dict, list)):
-            content = json.dumps(content, indent=2)
-        st.markdown(f"{role_icon} **{msg['role'].title()}:** {content}")
-    except Exception as e:
-        st.error(f"Error displaying message: {str(e)}")
 
-# Update chat display section
-chat_container = st.container()
-with chat_container:
-    for msg in st.session_state.chat_history:
-        display_chat_message(msg)
-        
+
+       
 def process_request(request: str):
     try:
         # Use search_geotechnical_data directly
@@ -702,7 +688,16 @@ with st.sidebar:
                     st.session_state.analysis_params["diameter"]
                 )
 
-# Main content
+def display_chat_message(msg):
+    try:
+        role_icon = "🧑" if msg["role"] == "user" else "🤖"
+        content = msg["content"]
+        if isinstance(content, (dict, list)):
+            content = json.dumps(content, indent=2)
+        st.markdown(f"{role_icon} **{msg['role'].title()}:** {content}")
+    except Exception as e:
+        st.error(f"Error displaying message: {str(e)}")
+
 # Main content
 st.title("🏗️ Geotechnical AI Agent by Mistral-Nemo-Instruct-2407")
 st.subheader("💬 Chat Interface")
@@ -714,11 +709,11 @@ if user_input:
         response = process_request(user_input)
         st.session_state.chat_history.append({"role": "assistant", "content": response})
 
+# Update chat display section
 chat_container = st.container()
 with chat_container:
     for msg in st.session_state.chat_history:
-        role_icon = "🧑" if msg["role"] == "user" else "🤖"
-        st.markdown(f"{role_icon} **{msg['role'].title()}:** {msg['content']}")
+        display_chat_message(msg)
 
 # Analysis Results Section
 st.subheader("📊 Analysis Results")
