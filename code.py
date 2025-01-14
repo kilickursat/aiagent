@@ -584,25 +584,21 @@ def initialize_agents():
         return None, None, None
         
 
-
        
 def process_request(request: str):
     try:
-        # Use search_geotechnical_data directly
         web_result = search_geotechnical_data(request)
         geotech_result = managed_geotech_agent(request=request)
         
-        # Convert generator to list and get final result
         final_result = list(manager_agent.run(
-            query=request,
-            context={
+            request,
+            {
                 "web_data": web_result,
-                "technical_analysis": str(geotech_result),
+                "technical_analysis": str(geotech_result)
             }
         ))
         
         if final_result:
-            # Extract actual content from ChatCompletionOutputMessage
             result = final_result[-1].content if hasattr(final_result[-1], 'content') else final_result[-1]
             return result
         else:
