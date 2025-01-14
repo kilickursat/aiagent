@@ -677,71 +677,67 @@ with st.sidebar:
                 )
 
 # Main content
-st.title("🏗️ Geotechnical AI Assistant")
-
-col1, col2 = st.columns([2, 1])
-
-# Update chat processing to use new process_request
-with col1:
-    st.subheader("💬 Chat Interface")
-    user_input = st.text_input("Ask a question:")
-    if user_input:
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
-        
-        with st.spinner("Processing..."):
-            response = process_request(user_input)
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
+# Main content
+st.title("🏗️ Geotechnical AI Agent by Mistral-Nemo-Instruct-2407")
+st.subheader("💬 Chat Interface")
+user_input = st.text_input("Ask a question:")
+if user_input:
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
     
-    chat_container = st.container()
-    with chat_container:
-        for msg in st.session_state.chat_history:
-            role_icon = "🧑" if msg["role"] == "user" else "🤖"
-            st.markdown(f"{role_icon} **{msg['role'].title()}:** {msg['content']}")
+    with st.spinner("Processing..."):
+        response = process_request(user_input)
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
 
-with col2:
-    st.subheader("📊 Analysis Results")
-    if st.session_state.current_analysis:
-        with st.expander("Detailed Results", expanded=True):
-            st.json(st.session_state.current_analysis)
-        
-        if analysis_type == "Tunnel Support":
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=[0, st.session_state.analysis_params["tunnel_diameter"]],
-                y=[st.session_state.analysis_params["depth"], 
-                   st.session_state.analysis_params["depth"]],
-                mode='lines',
-                name='Tunnel Level'
-            ))
+chat_container = st.container()
+with chat_container:
+    for msg in st.session_state.chat_history:
+        role_icon = "🧑" if msg["role"] == "user" else "🤖"
+        st.markdown(f"{role_icon} **{msg['role'].title()}:** {msg['content']}")
+
+# Analysis Results Section
+st.subheader("📊 Analysis Results")
+if st.session_state.current_analysis:
+    with st.expander("Detailed Results", expanded=True):
+        st.json(st.session_state.current_analysis)
+    
+    if analysis_type == "Tunnel Support":
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=[0, st.session_state.analysis_params["tunnel_diameter"]],
+            y=[st.session_state.analysis_params["depth"], 
+               st.session_state.analysis_params["depth"]],
+            mode='lines',
+            name='Tunnel Level'
+        ))
+        fig.update_layout(
+            title="Tunnel Cross Section",
+            xaxis_title="Width (m)",
+            yaxis_title="Depth (m)",
+            yaxis_autorange="reversed"
+        )
+        st.plotly_chart(fig)
+    
+    elif analysis_type == "RMR Analysis":
+        if "component_ratings" in st.session_state.current_analysis:
+            ratings = st.session_state.current_analysis["component_ratings"]
+            labels = {
+                "ucs_rating": "UCS",
+                "rqd_rating": "RQD",
+                "spacing_rating": "Spacing",
+                "condition_rating": "Condition",
+                "groundwater_rating": "Groundwater",
+                "orientation_rating": "Orientation"
+            }
+            fig = go.Figure(data=[
+                go.Bar(x=[labels[k] for k in ratings.keys()], 
+                      y=list(ratings.values()))
+            ])
             fig.update_layout(
-                title="Tunnel Cross Section",
-                xaxis_title="Width (m)",
-                yaxis_title="Depth (m)",
-                yaxis_autorange="reversed"
+                title="RMR Component Ratings",
+                xaxis_title="Parameters",
+                yaxis_title="Rating"
             )
             st.plotly_chart(fig)
-        
-        elif analysis_type == "RMR Analysis":
-            if st.session_state.current_analysis and "component_ratings" in st.session_state.current_analysis:
-                ratings = st.session_state.current_analysis["component_ratings"]
-                labels = {
-                    "ucs_rating": "UCS",
-                    "rqd_rating": "RQD",
-                    "spacing_rating": "Spacing",
-                    "condition_rating": "Condition",
-                    "groundwater_rating": "Groundwater",
-                    "orientation_rating": "Orientation"
-                }
-                fig = go.Figure(data=[
-                    go.Bar(x=[labels[k] for k in ratings.keys()], 
-                          y=list(ratings.values()))
-                ])
-                fig.update_layout(
-                    title="RMR Component Ratings",
-                    xaxis_title="Parameters",
-                    yaxis_title="Rating"
-                )
-                st.plotly_chart(fig)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("Built with ❤️ by Kilic Intelligence")
