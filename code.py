@@ -8,6 +8,8 @@ import plotly.graph_objects as go
 from datetime import datetime
 from huggingface_hub import login
 from smolagents import tool, CodeAgent, HfApiModel, ManagedAgent, ToolCallingAgent
+from typing import Dict, List  # Added this import
+
 
 st.set_page_config(page_title="Advanced Geotechnical AI", layout="wide")
 
