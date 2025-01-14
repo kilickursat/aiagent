@@ -8,3 +8,11 @@ smolagents
 huggingface_hub
 plotly
 gunicorn
+python-dotenv
+streamlit
+huggingface_hub
+smolagents
+plotly
+pandas
+numpy
+transformers
