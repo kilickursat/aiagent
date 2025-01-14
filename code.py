@@ -722,7 +722,7 @@ with col2:
             st.plotly_chart(fig)
         
         elif analysis_type == "RMR Analysis":
-            ratings = st.session_state.current_analysis["ratings"]
+            ratings = st.session_state.current_analysis["component_ratings"]
             fig = go.Figure(data=[
                 go.Bar(x=list(ratings.keys()), y=list(ratings.values()))
             ])
