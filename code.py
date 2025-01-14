@@ -13,6 +13,8 @@ from typing import Dict, List
 from markdownify import markdownify
 from requests.exceptions import RequestException
 from smolagents import tool, CodeAgent, HfApiModel, ManagedAgent, ToolCallingAgent, DuckDuckGoSearchTool
+import traceback
+import sys
 
 # Page configuration
 st.set_page_config(
