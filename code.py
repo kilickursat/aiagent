@@ -135,6 +135,90 @@ def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunne
                 "vertical_stress": vertical_stress,
                 "horizontal_stress": horizontal_stress
             }
+
+def get_support_recommendations(rmr: int) -> Dict:
+    """Get support recommendations based on RMR value.
+
+    Args:
+        rmr: Rock Mass Rating value
+
+    Returns:
+        Dictionary containing support recommendations
+    """
+    if rmr > 80:
+        return {
+            "excavation": "Full face, 3m advance",
+            "support": "Generally no support required",
+            "bolting": "Spot bolting if needed",
+            "shotcrete": "None required",
+            "steel_sets": "None required"
+        }
+    elif rmr > 60:
+        return {
+            "excavation": "Full face, 1.0-1.5m advance",
+            "support": "Complete within 20m of face",
+            "bolting": "Systematic bolting, 4m length, spaced 1.5-2m",
+            "shotcrete": "50mm in crown where required",
+            "steel_sets": "None required"
+        }
+    elif rmr > 40:
+        return {
+            "excavation": "Top heading and bench, 1.5-3m advance",
+            "support": "Complete within 10m of face",
+            "bolting": "Systematic bolting, 4-5m length, spaced 1-1.5m",
+            "shotcrete": "50-100mm in crown and 30mm in sides",
+            "steel_sets": "Light to medium ribs spaced 1.5m where required"
+        }
+    else:
+        return {
+            "excavation": "Multiple drifts, 0.5-1.5m advance",
+            "support": "Install support concurrent with excavation",
+            "bolting": "Systematic bolting with shotcrete and steel sets",
+            "shotcrete": "100-150mm in crown and sides",
+            "steel_sets": "Medium to heavy ribs spaced 0.75m"
+        }
+
+def get_q_support_category(q: float) -> Dict:
+    """Get Q-system support recommendations.
+
+    Args:
+        q: Q-system value
+
+    Returns:
+        Dictionary containing support recommendations
+    """
+    if q > 40:
+        return {
+            "support_type": "No support required",
+            "bolting": "None or occasional spot bolting",
+            "shotcrete": "None required"
+        }
+    elif q > 10:
+        return {
+            "support_type": "Spot bolting",
+            "bolting": "Spot bolts in crown, spaced 2.5m",
+            "shotcrete": "None required"
+        }
+    elif q > 4:
+        return {
+            "support_type": "Systematic bolting",
+            "bolting": "Systematic bolts in crown spaced 2m, occasional wire mesh",
+            "shotcrete": "40-100mm where needed"
+        }
+    elif q > 1:
+        return {
+            "support_type": "Systematic bolting with shotcrete",
+            "bolting": "Systematic bolts spaced 1-1.5m with wire mesh in crown and sides",
+            "shotcrete": "50-90mm in crown and 30mm on sides"
+        }
+    else:
+        return {
+            "support_type": "Heavy support",
+            "bolting": "Systematic bolts spaced 1m with wire mesh",
+            "shotcrete": "90-120mm in crown and 100mm on sides",
+            "additional": "Consider steel ribs, forepoling, or face support"
+        }
+
 @tool
 def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, groundwater: int, orientation: int) -> Dict:
             """Calculate Rock Mass Rating (RMR) classification.
@@ -433,6 +517,9 @@ def predict_cutter_life(ucs: float, penetration: float, rpm: float, diameter: fl
                  ((penetration ** constants['C3']) * (rpm ** constants['C4']) * \
                   (diameter ** constants['C5']) * (cai ** constants['C6']))
             return {"cutter_life_m3": cl}
+
+
+
 
 @st.cache_resource
 def initialize_agents():
