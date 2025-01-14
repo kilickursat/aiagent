@@ -84,6 +84,31 @@ def search_geotechnical_data(query: str) -> str:
     except Exception as e:
         return f"Search error: {str(e)}"
 
+        
+@tool
+def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
+            """Classify soil using USCS classification system.
+        
+            Args:
+                soil_type: Type of soil (clay, sand, silt)
+                plasticity_index: Plasticity index value
+                liquid_limit: Liquid limit value
+        
+            Returns:
+                Dictionary containing soil classification and description
+            """
+            if soil_type.lower() == 'clay':
+                if plasticity_index > 50:
+                    return {"classification": "CH", "description": "High plasticity clay"}
+                elif plasticity_index > 30:
+                    return {"classification": "CI", "description": "Medium plasticity clay"}
+                else:
+                    return {"classification": "CL", "description": "Low plasticity clay"}
+            return {"classification": "Unknown", "description": "Unknown soil type"}
+
+
+
+
 @tool
 def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunnel_diameter: float) -> Dict:
             """Calculate tunnel support pressure and related parameters.
@@ -418,30 +443,8 @@ def initialize_agents():
         
         model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
 
-        
-        @tool
-        def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
-            """Classify soil using USCS classification system.
-        
-            Args:
-                soil_type: Type of soil (clay, sand, silt)
-                plasticity_index: Plasticity index value
-                liquid_limit: Liquid limit value
-        
-            Returns:
-                Dictionary containing soil classification and description
-            """
-            if soil_type.lower() == 'clay':
-                if plasticity_index > 50:
-                    return {"classification": "CH", "description": "High plasticity clay"}
-                elif plasticity_index > 30:
-                    return {"classification": "CI", "description": "Medium plasticity clay"}
-                else:
-                    return {"classification": "CL", "description": "Low plasticity clay"}
-            return {"classification": "Unknown", "description": "Unknown soil type"}
-        
 
-
+        
         # Web search agent
         web_agent = ToolCallingAgent(
             tools=[search_geotechnical_data, visit_webpage],
