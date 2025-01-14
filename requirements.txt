@@ -16,3 +16,5 @@ plotly
 pandas
 numpy
 transformers
+requests
+markdownify
