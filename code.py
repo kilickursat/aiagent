@@ -440,7 +440,21 @@ def initialize_agents():
                  ((penetration ** constants['C3']) * (rpm ** constants['C4']) * \
                   (diameter ** constants['C5']) * (cai ** constants['C6']))
             return {"cutter_life_m3": cl}
-        
+
+
+        # Web search agent
+        web_agent = ToolCallingAgent(
+            tools=[search_geotechnical_data, visit_webpage],
+            model=model,
+            max_steps=10
+        )
+
+        managed_web_agent = ManagedAgent(
+            agent=web_agent,
+            name="geotech_web_search",
+            description="Performs web searches for geotechnical data and case studies."
+        )
+     
         geotech_agent = ToolCallingAgent(
             tools=[classify_soil,
         calculate_tunnel_support,
