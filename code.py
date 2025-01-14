@@ -84,40 +84,8 @@ def search_geotechnical_data(query: str) -> str:
     except Exception as e:
         return f"Search error: {str(e)}"
 
-
-@st.cache_resource
-def initialize_agents():
-    try:
-        # Get API key from secrets
-        hf_key = st.secrets["HUGGINGFACE_API_KEY"]
-        login(hf_key)
-        
-        model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
-
-        
-        @tool
-        def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
-            """Classify soil using USCS classification system.
-        
-            Args:
-                soil_type: Type of soil (clay, sand, silt)
-                plasticity_index: Plasticity index value
-                liquid_limit: Liquid limit value
-        
-            Returns:
-                Dictionary containing soil classification and description
-            """
-            if soil_type.lower() == 'clay':
-                if plasticity_index > 50:
-                    return {"classification": "CH", "description": "High plasticity clay"}
-                elif plasticity_index > 30:
-                    return {"classification": "CI", "description": "Medium plasticity clay"}
-                else:
-                    return {"classification": "CL", "description": "Low plasticity clay"}
-            return {"classification": "Unknown", "description": "Unknown soil type"}
-        
-        @tool
-        def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunnel_diameter: float) -> Dict:
+@tool
+def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunnel_diameter: float) -> Dict:
             """Calculate tunnel support pressure and related parameters.
         
             Args:
@@ -142,8 +110,8 @@ def initialize_agents():
                 "vertical_stress": vertical_stress,
                 "horizontal_stress": horizontal_stress
             }
-        @tool
-        def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, groundwater: int, orientation: int) -> Dict:
+@tool
+def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, groundwater: int, orientation: int) -> Dict:
             """Calculate Rock Mass Rating (RMR) classification.
         
             Args:
@@ -197,8 +165,8 @@ def initialize_agents():
                 }
             }
         
-        @tool
-        def calculate_q_system(rqd: float, jn: float, jr: float, ja: float, jw: float, srf: float) -> Dict:
+@tool
+def calculate_q_system(rqd: float, jn: float, jr: float, ja: float, jw: float, srf: float) -> Dict:
             """Calculate Q-system rating and support requirements.
         
             Args:
@@ -232,8 +200,8 @@ def initialize_agents():
                 }
             }
         
-        @tool
-        def estimate_tbm_performance(ucs: float, rqd: float, joint_spacing: float,
+@tool
+def estimate_tbm_performance(ucs: float, rqd: float, joint_spacing: float,
                                    abrasivity: float, diameter: float) -> Dict:
             """Estimate TBM performance parameters.
         
@@ -260,8 +228,8 @@ def initialize_agents():
                 "estimated_completion_days": round(1000/advance_rate, 0)
             }
         
-        @tool
-        def analyze_face_stability(depth: float, diameter: float, soil_density: float,
+@tool
+def analyze_face_stability(depth: float, diameter: float, soil_density: float,
                                  cohesion: float, friction_angle: float, water_table: float) -> str:
             """Analyze tunnel face stability.
             
@@ -289,8 +257,8 @@ def initialize_agents():
                 "support_pressure_required": round(sigma_v/fs, 2) if fs < 1.5 else 0
             })
         
-        @tool
-        def import_borehole_data(file_path: str) -> Dict:
+@tool
+def import_borehole_data(file_path: str) -> Dict:
             """Import and process borehole data.
         
             Args:
@@ -317,8 +285,8 @@ def initialize_agents():
                 logging.error(f"Error processing borehole data: {e}")
                 raise
         
-        @tool
-        def visualize_3d_results(coordinates: str, geology_data: str, analysis_data: str) -> Dict:
+@tool
+def visualize_3d_results(coordinates: str, geology_data: str, analysis_data: str) -> Dict:
             """Create 3D visualization of tunnel and analysis results.
         
             Args:
@@ -378,8 +346,8 @@ def initialize_agents():
         
             return {"plot": fig.to_dict(), "statistics": stats}
         
-        @tool
-        def calculate_tbm_penetration(alpha: float, fracture_spacing: float, peak_slope: float, csm_rop: float) -> Dict:
+@tool
+def calculate_tbm_penetration(alpha: float, fracture_spacing: float, peak_slope: float, csm_rop: float) -> Dict:
             """Calculate TBM Rate of Penetration using advanced formula.
             
             Args:
@@ -393,8 +361,8 @@ def initialize_agents():
             rop = 0.859 - rfi + bi + 0.0969 * csm_rop
             return {"penetration_rate": rop}
         
-        @tool
-        def calculate_cutter_specs(max_speed: float, cutter_diameter: float) -> Dict:
+@tool
+def calculate_cutter_specs(max_speed: float, cutter_diameter: float) -> Dict:
             """Calculate cutter head specs including RPM and power requirements.
             
             Args:
@@ -408,8 +376,8 @@ def initialize_agents():
                 "diameter": cutter_diameter
             }
         
-        @tool
-        def calculate_specific_energy(normal_force: float, spacing: float, penetration: float, 
+@tool
+def calculate_specific_energy(normal_force: float, spacing: float, penetration: float, 
                                     rolling_force: float, tip_angle: float) -> Dict:
             """Calculate specific energy for disc cutters.
             
@@ -423,8 +391,8 @@ def initialize_agents():
             se = (normal_force / (spacing * penetration)) * (1 + (rolling_force/normal_force) * math.tan(tip_angle))
             return {"specific_energy": se}
         
-        @tool
-        def predict_cutter_life(ucs: float, penetration: float, rpm: float, diameter: float, 
+@tool
+def predict_cutter_life(ucs: float, penetration: float, rpm: float, diameter: float, 
                                cai: float, constants: Dict[str, float]) -> Dict:
             """Predict cutter life using empirical relationship.
             
@@ -440,6 +408,38 @@ def initialize_agents():
                  ((penetration ** constants['C3']) * (rpm ** constants['C4']) * \
                   (diameter ** constants['C5']) * (cai ** constants['C6']))
             return {"cutter_life_m3": cl}
+
+@st.cache_resource
+def initialize_agents():
+    try:
+        # Get API key from secrets
+        hf_key = st.secrets["HUGGINGFACE_API_KEY"]
+        login(hf_key)
+        
+        model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
+
+        
+        @tool
+        def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
+            """Classify soil using USCS classification system.
+        
+            Args:
+                soil_type: Type of soil (clay, sand, silt)
+                plasticity_index: Plasticity index value
+                liquid_limit: Liquid limit value
+        
+            Returns:
+                Dictionary containing soil classification and description
+            """
+            if soil_type.lower() == 'clay':
+                if plasticity_index > 50:
+                    return {"classification": "CH", "description": "High plasticity clay"}
+                elif plasticity_index > 30:
+                    return {"classification": "CI", "description": "Medium plasticity clay"}
+                else:
+                    return {"classification": "CL", "description": "Low plasticity clay"}
+            return {"classification": "Unknown", "description": "Unknown soil type"}
+        
 
 
         # Web search agent
