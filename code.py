@@ -52,7 +52,55 @@ def initialize_agents():
         model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
         
         @tool
+        def visit_webpage(url: str) -> str:
+            """Visits a webpage at the given URL and returns its content as a markdown string.
+        
+            Args:
+                url: The URL of the webpage to visit and retrieve content from.
+        
+            Returns:
+                The content of the webpage converted to Markdown, or an error message if the request fails.
+            """
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                markdown_content = markdownify(response.text).strip()
+                markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
+                return markdown_content
+            except RequestException as e:
+                return f"Error fetching webpage: {str(e)}"
+            except Exception as e:
+                return f"Unexpected error: {str(e)}"
+        
+        @tool
+        def search_geotechnical_data(query: str) -> str:
+            """Searches for geotechnical information using DuckDuckGo.
+        
+            Args:
+                query: The search query for finding geotechnical information.
+        
+            Returns:
+                Search results as formatted text.
+            """
+            search_tool = DuckDuckGoSearchTool()
+            try:
+                results = search_tool(query)  # Changed from .run() to direct call
+                return str(results)
+            except Exception as e:
+                return f"Search error: {str(e)}"
+        
+        @tool
         def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
+            """Classify soil using USCS classification system.
+        
+            Args:
+                soil_type: Type of soil (clay, sand, silt)
+                plasticity_index: Plasticity index value
+                liquid_limit: Liquid limit value
+        
+            Returns:
+                Dictionary containing soil classification and description
+            """
             if soil_type.lower() == 'clay':
                 if plasticity_index > 50:
                     return {"classification": "CH", "description": "High plasticity clay"}
@@ -60,76 +108,347 @@ def initialize_agents():
                     return {"classification": "CI", "description": "Medium plasticity clay"}
                 else:
                     return {"classification": "CL", "description": "Low plasticity clay"}
-            elif soil_type.lower() == 'sand':
-                return {"classification": "SP", "description": "Poorly graded sand"}
-            elif soil_type.lower() == 'silt':
-                return {"classification": "ML", "description": "Low plasticity silt"}
             return {"classification": "Unknown", "description": "Unknown soil type"}
-
+        
         @tool
         def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunnel_diameter: float) -> Dict:
+            """Calculate tunnel support pressure and related parameters.
+        
+            Args:
+                depth: Tunnel depth from surface in meters
+                soil_density: Soil density in kg/m³
+                k0: At-rest earth pressure coefficient
+                tunnel_diameter: Tunnel diameter in meters
+        
+            Returns:
+                Dictionary containing support pressures, stresses and safety factors
+            """
             g = 9.81
             vertical_stress = depth * soil_density * g / 1000
             horizontal_stress = k0 * vertical_stress
             support_pressure = (vertical_stress + horizontal_stress) / 2
             safety_factor = 1.5 if depth < 30 else 2.0
-            
+        
             return {
-                "support_pressure": round(support_pressure, 2),
-                "design_pressure": round(support_pressure * safety_factor, 2),
+                "support_pressure": support_pressure,
+                "design_pressure": support_pressure * safety_factor,
                 "safety_factor": safety_factor,
-                "vertical_stress": round(vertical_stress, 2),
-                "horizontal_stress": round(horizontal_stress, 2)
+                "vertical_stress": vertical_stress,
+                "horizontal_stress": horizontal_stress
             }
-
         @tool
-        def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, 
-                         groundwater: int, orientation: int) -> Dict:
-            ratings = {
-                "ucs": min(15, max(0, int(ucs/20))),
-                "rqd": min(20, max(3, int(rqd/5))),
-                "spacing": min(20, max(5, int(spacing*10))),
-                "condition": min(30, max(0, condition)),
-                "groundwater": min(15, max(0, groundwater)),
-                "orientation": min(0, max(-12, orientation))
-            }
-            
-            total_rmr = sum(ratings.values())
-            
-            if total_rmr > 80:
-                rock_class = "I - Very good rock"
-            elif total_rmr > 60:
-                rock_class = "II - Good rock"
-            elif total_rmr > 40:
-                rock_class = "III - Fair rock"
-            elif total_rmr > 20:
-                rock_class = "IV - Poor rock"
-            else:
-                rock_class = "V - Very poor rock"
-                
+        def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, groundwater: int, orientation: int) -> Dict:
+            """Calculate Rock Mass Rating (RMR) classification.
+        
+            Args:
+                ucs: Uniaxial compressive strength in MPa
+                rqd: Rock Quality Designation as percentage
+                spacing: Joint spacing in meters
+                condition: Joint condition rating (0-30)
+                groundwater: Groundwater condition rating (0-15)
+                orientation: Joint orientation rating (-12-0)
+        
+            Returns:
+                Dictionary containing RMR value, rock class, and component ratings
+            """
+            if ucs > 250: ucs_rating = 15
+            elif ucs > 100: ucs_rating = 12
+            elif ucs > 50: ucs_rating = 7
+            elif ucs > 25: ucs_rating = 4
+            else: ucs_rating = 2
+        
+            if rqd > 90: rqd_rating = 20
+            elif rqd > 75: rqd_rating = 17
+            elif rqd > 50: rqd_rating = 13
+            elif rqd > 25: rqd_rating = 8
+            else: rqd_rating = 3
+        
+            if spacing > 2: spacing_rating = 20
+            elif spacing > 0.6: spacing_rating = 15
+            elif spacing > 0.2: spacing_rating = 10
+            elif spacing > 0.06: spacing_rating = 8
+            else: spacing_rating = 5
+        
+            total_rmr = ucs_rating + rqd_rating + spacing_rating + condition + groundwater + orientation
+        
+            if total_rmr > 80: rock_class = "I - Very good rock"
+            elif total_rmr > 60: rock_class = "II - Good rock"
+            elif total_rmr > 40: rock_class = "III - Fair rock"
+            elif total_rmr > 20: rock_class = "IV - Poor rock"
+            else: rock_class = "V - Very poor rock"
+        
             return {
                 "rmr_value": total_rmr,
                 "rock_class": rock_class,
-                "ratings": ratings
+                "support_recommendations": get_support_recommendations(total_rmr),
+                "component_ratings": {
+                    "ucs_rating": ucs_rating,
+                    "rqd_rating": rqd_rating,
+                    "spacing_rating": spacing_rating,
+                    "condition_rating": condition,
+                    "groundwater_rating": groundwater,
+                    "orientation_rating": orientation
+                }
             }
-
+        
+        @tool
+        def calculate_q_system(rqd: float, jn: float, jr: float, ja: float, jw: float, srf: float) -> Dict:
+            """Calculate Q-system rating and support requirements.
+        
+            Args:
+                rqd: Rock Quality Designation as percentage
+                jn: Joint set number
+                jr: Joint roughness number
+                ja: Joint alteration number
+                jw: Joint water reduction factor
+                srf: Stress Reduction Factor
+        
+            Returns:
+                Dictionary containing Q-value and support recommendations
+            """
+            q_value = (rqd/jn) * (jr/ja) * (jw/srf)
+        
+            if q_value > 40: quality = "Exceptionally Good"
+            elif q_value > 10: quality = "Very Good"
+            elif q_value > 4: quality = "Good"
+            elif q_value > 1: quality = "Fair"
+            elif q_value > 0.1: quality = "Poor"
+            else: quality = "Extremely Poor"
+        
+            return {
+                "q_value": round(q_value, 2),
+                "rock_quality": quality,
+                "support_category": get_q_support_category(q_value),
+                "parameters": {
+                    "RQD/Jn": round(rqd/jn, 2),
+                    "Jr/Ja": round(jr/ja, 2),
+                    "Jw/SRF": round(jw/srf, 2)
+                }
+            }
+        
         @tool
         def estimate_tbm_performance(ucs: float, rqd: float, joint_spacing: float,
                                    abrasivity: float, diameter: float) -> Dict:
+            """Estimate TBM performance parameters.
+        
+            Args:
+                ucs: Uniaxial compressive strength in MPa
+                rqd: Rock Quality Designation as percentage
+                joint_spacing: Average joint spacing in meters
+                abrasivity: Cerchar abrasivity index
+                diameter: TBM diameter in meters
+        
+            Returns:
+                Dictionary containing TBM performance estimates
+            """
             pr = 20 * (1/ucs) * (rqd/100) * (1/abrasivity)
             utilization = 0.85 - (0.01 * (abrasivity/2))
             advance_rate = pr * utilization * 24
             cutter_life = 100 * (250/ucs) * (2/abrasivity)
-
+        
             return {
                 "penetration_rate": round(pr, 2),
                 "daily_advance": round(advance_rate, 2),
                 "utilization": round(utilization * 100, 1),
-                "cutter_life_hours": round(cutter_life, 0)
+                "cutter_life_hours": round(cutter_life, 0),
+                "estimated_completion_days": round(1000/advance_rate, 0)
             }
         
+        @tool
+        def analyze_face_stability(depth: float, diameter: float, soil_density: float,
+                                 cohesion: float, friction_angle: float, water_table: float) -> str:
+            """Analyze tunnel face stability.
+            
+            Args:
+                depth: Tunnel depth in meters
+                diameter: Tunnel diameter in meters
+                soil_density: Soil density in kg/m³
+                cohesion: Soil cohesion in kPa
+                friction_angle: Soil friction angle in degrees
+                water_table: Water table depth from surface in meters
+            
+            Returns:
+                Formatted string containing stability analysis results
+            """
+            g = 9.81
+            sigma_v = depth * soil_density * g / 1000
+            water_pressure = (depth - water_table) * 9.81 if water_table < depth else 0
+            N = (sigma_v - water_pressure) * math.tan(math.radians(friction_angle)) + cohesion
+            fs = N / (0.5 * soil_density * g * diameter / 1000)
+            
+            return json.dumps({
+                "stability_ratio": round(N, 2),
+                "factor_of_safety": round(fs, 2), 
+                "water_pressure": round(water_pressure, 2),
+                "support_pressure_required": round(sigma_v/fs, 2) if fs < 1.5 else 0
+            })
+        
+        @tool
+        def import_borehole_data(file_path: str) -> Dict:
+            """Import and process borehole data.
+        
+            Args:
+                file_path: Path to borehole data CSV file
+        
+            Returns:
+                Dictionary containing processed borehole data
+            """
+            try:
+                df = pd.read_csv(file_path)
+                required_columns = ['depth', 'soil_type', 'N_value', 'moisture']
+        
+                if not all(col in df.columns for col in required_columns):
+                    raise ValueError("Missing required columns in borehole data")
+        
+                return {
+                    "total_depth": df['depth'].max(),
+                    "soil_layers": df['soil_type'].nunique(),
+                    "ground_water_depth": df[df['moisture'] > 50]['depth'].min(),
+                    "average_N_value": df['N_value'].mean(),
+                    "soil_profile": df.groupby('soil_type')['depth'].agg(['min', 'max']).to_dict()
+                }
+            except Exception as e:
+                logging.error(f"Error processing borehole data: {e}")
+                raise
+        
+        @tool
+        def visualize_3d_results(coordinates: str, geology_data: str, analysis_data: str) -> Dict:
+            """Create 3D visualization of tunnel and analysis results.
+        
+            Args:
+                coordinates: JSON string of tunnel coordinates in format [[x1,y1,z1], [x2,y2,z2], ...] 
+                geology_data: JSON string of geological layers containing type, color and bounds
+                analysis_data: JSON string with stability analysis results including factor of safety
+        
+            Returns:
+                Dict containing plot data (Plotly figure) and statistics (length, depth, critical sections)
+            """
+            tunnel_path = json.loads(coordinates)
+            geology = json.loads(geology_data)
+            analysis_results = json.loads(analysis_data)
+        
+            fig = go.Figure()
+            x, y, z = zip(*tunnel_path)
+        
+            # Tunnel alignment and stability analysis
+            fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='lines', name='Tunnel Alignment'))
+            fig.add_trace(go.Scatter3d(
+                x=x, y=y, z=z,
+                mode='markers',
+                marker=dict(
+                    size=5,
+                    color=[r['factor_of_safety'] for r in analysis_results['stability']],
+                    colorscale='Viridis',
+                    showscale=True,
+                    colorbar=dict(title='Factor of Safety')
+                ),
+                name='Stability Analysis'
+            ))
+        
+            # Add geology layers
+            for layer in geology:
+                fig.add_trace(go.Surface(
+                    x=layer['bounds']['x'],
+                    y=layer['bounds']['y'],
+                    z=layer['bounds']['z'],
+                    colorscale=[[0, layer['color']], [1, layer['color']]],
+                    showscale=False,
+                    name=layer['type'],
+                    opacity=0.6
+                ))
+        
+            fig.update_layout(
+                scene=dict(aspectmode='data'),
+                margin=dict(l=0, r=0, b=0, t=30)
+            )
+        
+            stats = {
+                "tunnel_length": sum(math.sqrt((x[i]-x[i-1])**2 + (y[i]-y[i-1])**2 + (z[i]-z[i-1])**2)
+                                   for i in range(1, len(x))),
+                "depth_range": [min(z), max(z)],
+                "critical_sections": [i for i, r in enumerate(analysis_results['stability'])
+                                    if r['factor_of_safety'] < 1.5]
+            }
+        
+            return {"plot": fig.to_dict(), "statistics": stats}
+        
+        @tool
+        def calculate_tbm_penetration(alpha: float, fracture_spacing: float, peak_slope: float, csm_rop: float) -> Dict:
+            """Calculate TBM Rate of Penetration using advanced formula.
+            
+            Args:
+                alpha: Angle between tunnel axis and weakness plane
+                fracture_spacing: Fracture spacing
+                peak_slope: Peak slope from punch tests
+                csm_rop: CSM model basic ROP
+            """
+            rfi = 1.44 * math.log(alpha) - 0.0187 * fracture_spacing
+            bi = 0.0157 * peak_slope
+            rop = 0.859 - rfi + bi + 0.0969 * csm_rop
+            return {"penetration_rate": rop}
+        
+        @tool
+        def calculate_cutter_specs(max_speed: float, cutter_diameter: float) -> Dict:
+            """Calculate cutter head specs including RPM and power requirements.
+            
+            Args:
+                max_speed: Maximum cutting speed
+                cutter_diameter: Diameter of cutter
+            """
+            rpm = max_speed / (math.pi * cutter_diameter)
+            return {
+                "rpm": rpm,
+                "max_speed": max_speed,
+                "diameter": cutter_diameter
+            }
+        
+        @tool
+        def calculate_specific_energy(normal_force: float, spacing: float, penetration: float, 
+                                    rolling_force: float, tip_angle: float) -> Dict:
+            """Calculate specific energy for disc cutters.
+            
+            Args:
+                normal_force: Normal force on cutter
+                spacing: Spacing between cutters
+                penetration: Penetration per revolution
+                rolling_force: Rolling force
+                tip_angle: Angle of cutter tip in radians
+            """
+            se = (normal_force / (spacing * penetration)) * (1 + (rolling_force/normal_force) * math.tan(tip_angle))
+            return {"specific_energy": se}
+        
+        @tool
+        def predict_cutter_life(ucs: float, penetration: float, rpm: float, diameter: float, 
+                               cai: float, constants: Dict[str, float]) -> Dict:
+            """Predict cutter life using empirical relationship.
+            
+            Args:
+                ucs: Uniaxial compressive strength
+                penetration: Penetration rate
+                rpm: Cutterhead revolution speed
+                diameter: Tunnel diameter
+                cai: Cerchar abrasivity index
+                constants: Dictionary of C1-C6 constants
+            """
+            cl = (constants['C1'] * (ucs ** constants['C2'])) / \
+                 ((penetration ** constants['C3']) * (rpm ** constants['C4']) * \
+                  (diameter ** constants['C5']) * (cai ** constants['C6']))
+            return {"cutter_life_m3": cl}
+        
         geotech_agent = ToolCallingAgent(
-            tools=[classify_soil, calculate_tunnel_support, calculate_rmr, estimate_tbm_performance],
+            tools=[classify_soil,
+        calculate_tunnel_support,
+        calculate_rmr,
+        calculate_q_system,
+        estimate_tbm_performance,
+        analyze_face_stability,
+        import_borehole_data,
+        visualize_3d_results,
+        calculate_tbm_penetration,  
+        calculate_cutter_specs,     
+        calculate_specific_energy,  
+        predict_cutter_life       
+    ],
             model=model,
             max_steps=10
         )
