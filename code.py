@@ -13,7 +13,8 @@ st.set_page_config(page_title="Advanced Geotechnical AI", layout="wide")
 
 # Use Streamlit secrets
 try:
-    login(st.secrets["HUGGINGFACE_API_KEY"])
+    #login(st.secrets["HUGGINGFACE_API_KEY"])
+    hf_key = st.secrets["HUGGINGFACE_API_KEY"]
 except Exception as e:
     st.error("Authentication failed. Please check API key configuration.")
     st.stop()
