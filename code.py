@@ -722,16 +722,26 @@ with col2:
             st.plotly_chart(fig)
         
         elif analysis_type == "RMR Analysis":
-            ratings = st.session_state.current_analysis["component_ratings"]
-            fig = go.Figure(data=[
-                go.Bar(x=list(ratings.keys()), y=list(ratings.values()))
-            ])
-            fig.update_layout(
-                title="RMR Component Ratings",
-                xaxis_title="Parameters",
-                yaxis_title="Rating"
-            )
-            st.plotly_chart(fig)
+            if st.session_state.current_analysis and "component_ratings" in st.session_state.current_analysis:
+                ratings = st.session_state.current_analysis["component_ratings"]
+                labels = {
+                    "ucs_rating": "UCS",
+                    "rqd_rating": "RQD",
+                    "spacing_rating": "Spacing",
+                    "condition_rating": "Condition",
+                    "groundwater_rating": "Groundwater",
+                    "orientation_rating": "Orientation"
+                }
+                fig = go.Figure(data=[
+                    go.Bar(x=[labels[k] for k in ratings.keys()], 
+                          y=list(ratings.values()))
+                ])
+                fig.update_layout(
+                    title="RMR Component Ratings",
+                    xaxis_title="Parameters",
+                    yaxis_title="Rating"
+                )
+                st.plotly_chart(fig)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("Built with ❤️ by Kilic Intelligence")
