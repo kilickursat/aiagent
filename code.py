@@ -47,16 +47,15 @@ if 'analysis_params' not in st.session_state:
     st.session_state.analysis_params = {}
 
 @tool
-def search_geotechnical_data(query: str) -> str:
-    search_tool = DuckDuckGoSearchTool()
-    try:
-        results = search_tool(query)
-        return str(results)
-    except Exception as e:
-        return f"Search error: {str(e)}"
-        
-@tool
 def visit_webpage(url: str) -> str:
+    """Visits a webpage at the given URL and returns its content as a markdown string.
+
+    Args:
+        url: The URL of the webpage to visit and retrieve content from.
+
+    Returns:
+        The content of the webpage converted to Markdown, or an error message if the request fails.
+    """
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -67,6 +66,24 @@ def visit_webpage(url: str) -> str:
         return f"Error fetching webpage: {str(e)}"
     except Exception as e:
         return f"Unexpected error: {str(e)}"
+
+@tool
+def search_geotechnical_data(query: str) -> str:
+    """Searches for geotechnical information using DuckDuckGo.
+
+    Args:
+        query: The search query for finding geotechnical information.
+
+    Returns:
+        Search results as formatted text.
+    """
+    search_tool = DuckDuckGoSearchTool()
+    try:
+        results = search_tool(query)  # Changed from .run() to direct call
+        return str(results)
+    except Exception as e:
+        return f"Search error: {str(e)}"
+
 
 @st.cache_resource
 def initialize_agents():
