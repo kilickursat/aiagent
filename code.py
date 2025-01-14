@@ -524,13 +524,10 @@ def predict_cutter_life(ucs: float, penetration: float, rpm: float, diameter: fl
 @st.cache_resource
 def initialize_agents():
     try:
-        # Get API key from secrets
         hf_key = st.secrets["HUGGINGFACE_API_KEY"]
         login(hf_key)
         
         model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
-
-
         
         # Web search agent
         web_agent = ToolCallingAgent(
@@ -542,23 +539,25 @@ def initialize_agents():
         managed_web_agent = ManagedAgent(
             agent=web_agent,
             name="geotech_web_search",
-            description="Performs web searches for geotechnical data and case studies."
+            description="Performs web searches for geotechnical data."
         )
      
+        # Geotech calculation agent
         geotech_agent = ToolCallingAgent(
-            tools=[classify_soil,
-        calculate_tunnel_support,
-        calculate_rmr,
-        calculate_q_system,
-        estimate_tbm_performance,
-        analyze_face_stability,
-        import_borehole_data,
-        visualize_3d_results,
-        calculate_tbm_penetration,  
-        calculate_cutter_specs,     
-        calculate_specific_energy,  
-        predict_cutter_life       
-    ],
+            tools=[
+                classify_soil,
+                calculate_tunnel_support,
+                calculate_rmr,
+                calculate_q_system,
+                estimate_tbm_performance,
+                analyze_face_stability,
+                import_borehole_data,
+                visualize_3d_results,
+                calculate_tbm_penetration,
+                calculate_cutter_specs,
+                calculate_specific_energy,
+                predict_cutter_life
+            ],
             model=model,
             max_steps=10
         )
@@ -566,12 +565,12 @@ def initialize_agents():
         managed_geotech_agent = ManagedAgent(
             agent=geotech_agent,
             name="geotech_analysis",
-            description="Performs geotechnical calculations and analysis."
+            description="Performs geotechnical calculations."
         )
 
-        # Manager agent
+        # Manager agent with search_geotechnical_data tool
         manager_agent = CodeAgent(
-            tools=[],
+            tools=[search_geotechnical_data],
             model=model,
             managed_agents=[managed_web_agent, managed_geotech_agent],
             additional_authorized_imports=["time", "numpy", "pandas"]
@@ -579,23 +578,50 @@ def initialize_agents():
         
         return managed_web_agent, managed_geotech_agent, manager_agent
     except Exception as e:
-        st.error(f"Failed to initialize agents: {str(e)}")
+        st.error(f"Failed to initialize agents: {str(e)}\nFull traceback:\n{traceback.format_exc()}")
         return None, None, None
+        
+# Add error handling for chat display
+def display_chat_message(msg):
+    try:
+        role_icon = "🧑" if msg["role"] == "user" else "🤖"
+        content = msg["content"]
+        if isinstance(content, (dict, list)):
+            content = json.dumps(content, indent=2)
+        st.markdown(f"{role_icon} **{msg['role'].title()}:** {content}")
+    except Exception as e:
+        st.error(f"Error displaying message: {str(e)}")
 
+# Update chat display section
+chat_container = st.container()
+with chat_container:
+    for msg in st.session_state.chat_history:
+        display_chat_message(msg)
+        
 def process_request(request: str):
     try:
-        web_result = managed_web_agent(request=request)
+        # Use search_geotechnical_data directly
+        web_result = search_geotechnical_data(request)
         geotech_result = managed_geotech_agent(request=request)
         
-        final_result = manager_agent.run({
-            "web_data": str(web_result),
-            "technical_analysis": str(geotech_result),
-            "query": request
-        })
+        # Convert generator to list and get final result
+        final_result = list(manager_agent.run(
+            query=request,
+            context={
+                "web_data": web_result,
+                "technical_analysis": str(geotech_result),
+            }
+        ))
         
-        return final_result
+        if final_result:
+            # Extract actual content from ChatCompletionOutputMessage
+            result = final_result[-1].content if hasattr(final_result[-1], 'content') else final_result[-1]
+            return result
+        else:
+            return "No results generated"
+            
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Error: {str(e)}\nFull traceback:\n{traceback.format_exc()}"
 
 # Initialize agent
 managed_web_agent, managed_geotech_agent, manager_agent = initialize_agents()
