@@ -5,10 +5,14 @@ import json
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import re
+import requests
 from datetime import datetime
 from huggingface_hub import login
 from typing import Dict, List
-from smolagents import tool, CodeAgent, HfApiModel, ManagedAgent, ToolCallingAgent
+from markdownify import markdownify
+from requests.exceptions import RequestException
+from smolagents import tool, CodeAgent, HfApiModel, ManagedAgent, ToolCallingAgent, DuckDuckGoSearchTool
 
 # Page configuration
 st.set_page_config(
@@ -42,6 +46,28 @@ if 'current_analysis' not in st.session_state:
 if 'analysis_params' not in st.session_state:
     st.session_state.analysis_params = {}
 
+@tool
+def search_geotechnical_data(query: str) -> str:
+    search_tool = DuckDuckGoSearchTool()
+    try:
+        results = search_tool(query)
+        return str(results)
+    except Exception as e:
+        return f"Search error: {str(e)}"
+        
+@tool
+def visit_webpage(url: str) -> str:
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        markdown_content = markdownify(response.text).strip()
+        markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
+        return markdown_content
+    except RequestException as e:
+        return f"Error fetching webpage: {str(e)}"
+    except Exception as e:
+        return f"Unexpected error: {str(e)}"
+
 @st.cache_resource
 def initialize_agents():
     try:
@@ -50,44 +76,7 @@ def initialize_agents():
         login(hf_key)
         
         model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
-        
-        @tool
-        def visit_webpage(url: str) -> str:
-            """Visits a webpage at the given URL and returns its content as a markdown string.
-        
-            Args:
-                url: The URL of the webpage to visit and retrieve content from.
-        
-            Returns:
-                The content of the webpage converted to Markdown, or an error message if the request fails.
-            """
-            try:
-                response = requests.get(url)
-                response.raise_for_status()
-                markdown_content = markdownify(response.text).strip()
-                markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
-                return markdown_content
-            except RequestException as e:
-                return f"Error fetching webpage: {str(e)}"
-            except Exception as e:
-                return f"Unexpected error: {str(e)}"
-        
-        @tool
-        def search_geotechnical_data(query: str) -> str:
-            """Searches for geotechnical information using DuckDuckGo.
-        
-            Args:
-                query: The search query for finding geotechnical information.
-        
-            Returns:
-                Search results as formatted text.
-            """
-            search_tool = DuckDuckGoSearchTool()
-            try:
-                results = search_tool(query)  # Changed from .run() to direct call
-                return str(results)
-            except Exception as e:
-                return f"Search error: {str(e)}"
+
         
         @tool
         def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
@@ -453,24 +442,42 @@ def initialize_agents():
             max_steps=10
         )
         
-        return ManagedAgent(
+        managed_geotech_agent = ManagedAgent(
             agent=geotech_agent,
             name="geotech_analysis",
             description="Performs geotechnical calculations and analysis."
         )
+
+        # Manager agent
+        manager_agent = CodeAgent(
+            tools=[],
+            model=model,
+            managed_agents=[managed_web_agent, managed_geotech_agent],
+            additional_authorized_imports=["time", "numpy", "pandas"]
+        )
+        
+        return managed_web_agent, managed_geotech_agent, manager_agent
     except Exception as e:
         st.error(f"Failed to initialize agents: {str(e)}")
-        return None
+        return None, None, None
 
-def process_request(agent: ManagedAgent, request: str):
+def process_request(request: str):
     try:
-        result = agent(request=request)
-        return json.dumps(result, indent=2) if isinstance(result, dict) else str(result)
+        web_result = managed_web_agent(request=request)
+        geotech_result = managed_geotech_agent(request=request)
+        
+        final_result = manager_agent.run({
+            "web_data": str(web_result),
+            "technical_analysis": str(geotech_result),
+            "query": request
+        })
+        
+        return final_result
     except Exception as e:
         return f"Error: {str(e)}"
 
 # Initialize agent
-managed_geotech_agent = initialize_agents()
+managed_web_agent, managed_geotech_agent, manager_agent = initialize_agents()
 
 # Sidebar
 with st.sidebar:
@@ -553,6 +560,7 @@ st.title("🏗️ Geotechnical AI Assistant")
 
 col1, col2 = st.columns([2, 1])
 
+# Update chat processing to use new process_request
 with col1:
     st.subheader("💬 Chat Interface")
     user_input = st.text_input("Ask a question:")
@@ -560,7 +568,7 @@ with col1:
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         
         with st.spinner("Processing..."):
-            response = process_request(managed_geotech_agent, user_input)
+            response = process_request(user_input)
             st.session_state.chat_history.append({"role": "assistant", "content": response})
     
     chat_container = st.container()
