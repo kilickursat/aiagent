@@ -18,7 +18,7 @@ import sys
 
 # Page configuration
 st.set_page_config(
-    page_title="Advanced Geotechnical AI",
+    page_title="Advanced Geotechnical AI Agent",
     page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -529,7 +529,7 @@ def initialize_agents():
         hf_key = st.secrets["HUGGINGFACE_API_KEY"]
         login(hf_key)
         
-        model = HfApiModel("mistralai/Mistral-Nemo-Instruct-2407")
+        model = HfApiModel("deepseek-ai/DeepSeek-V3") # mistralai/Mistral-Nemo-Instruct-2407
         
         # Web search agent
         web_agent = ToolCallingAgent(
