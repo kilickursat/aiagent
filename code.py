@@ -18,7 +18,7 @@ import sys
 
 # Page configuration
 st.set_page_config(
-    page_title="Advanced Geotechnical AI Agent",
+    page_title="Advanced Geotechnical AI Agent by Qwen2.5-Coder-32B-Instruct",
     page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
