@@ -23,10 +23,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Styling
-st.markdown("""
-""", unsafe_allow_html=True)
-
 # Initialize session state
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
@@ -37,12 +33,7 @@ if 'analysis_params' not in st.session_state:
 
 @tool
 def visit_webpage(url: str) -> str:
-    """Visits a webpage at the given URL and returns its content as a markdown string.
-    Args:
-        url: The URL of the webpage to visit and retrieve content from.
-    Returns:
-        The content of the webpage converted to Markdown, or an error message if the request fails.
-    """
+    """Visits a webpage at the given URL and returns its content as a markdown string."""
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -56,15 +47,9 @@ def visit_webpage(url: str) -> str:
 
 @tool
 def search_geotechnical_data(query: str) -> str:
-    """Searches for geotechnical information using DuckDuckGo.
-    Args:
-        query: The search query for finding geotechnical information.
-    Returns:
-        Search results as formatted text.
-    """
+    """Searches for geotechnical information using DuckDuckGo."""
     search_tool = DuckDuckGoSearchTool()
     try:
-        # Add filters for peer-reviewed journals, books, and company websites
         filtered_query = (
             f"{query} site:.edu OR site:.org OR site:.gov OR site:.com "
             f'"geotechnical engineering" OR "tunnelling" OR "tunnel boring machine" '
@@ -78,14 +63,7 @@ def search_geotechnical_data(query: str) -> str:
 
 @tool
 def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) -> Dict:
-    """Classify soil using USCS classification system.
-    Args:
-        soil_type: Type of soil (clay, sand, silt)
-        plasticity_index: Plasticity index value
-        liquid_limit: Liquid limit value
-    Returns:
-        Dictionary containing soil classification and description
-    """
+    """Classify soil using USCS classification system."""
     if soil_type.lower() == 'clay':
         if plasticity_index > 50:
             return {"classification": "CH", "description": "High plasticity clay"}
@@ -97,15 +75,7 @@ def classify_soil(soil_type: str, plasticity_index: float, liquid_limit: float) 
 
 @tool
 def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunnel_diameter: float) -> Dict:
-    """Calculate tunnel support pressure and related parameters.
-    Args:
-        depth: Tunnel depth from surface in meters
-        soil_density: Soil density in kg/m³
-        k0: At-rest earth pressure coefficient
-        tunnel_diameter: Tunnel diameter in meters
-    Returns:
-        Dictionary containing support pressures, stresses and safety factors
-    """
+    """Calculate tunnel support pressure and related parameters."""
     g = 9.81
     vertical_stress = depth * soil_density * g / 1000
     horizontal_stress = k0 * vertical_stress
@@ -120,12 +90,7 @@ def calculate_tunnel_support(depth: float, soil_density: float, k0: float, tunne
     }
 
 def get_support_recommendations(rmr: int) -> Dict:
-    """Get support recommendations based on RMR value.
-    Args:
-        rmr: Rock Mass Rating value
-    Returns:
-        Dictionary containing support recommendations
-    """
+    """Get support recommendations based on RMR value."""
     if rmr > 80:
         return {
             "excavation": "Full face, 3m advance",
@@ -159,58 +124,9 @@ def get_support_recommendations(rmr: int) -> Dict:
             "steel_sets": "Medium to heavy ribs spaced 0.75m"
         }
 
-def get_q_support_category(q: float) -> Dict:
-    """Get Q-system support recommendations.
-    Args:
-        q: Q-system value
-    Returns:
-        Dictionary containing support recommendations
-    """
-    if q > 40:
-        return {
-            "support_type": "No support required",
-            "bolting": "None or occasional spot bolting",
-            "shotcrete": "None required"
-        }
-    elif q > 10:
-        return {
-            "support_type": "Spot bolting",
-            "bolting": "Spot bolts in crown, spaced 2.5m",
-            "shotcrete": "None required"
-        }
-    elif q > 4:
-        return {
-            "support_type": "Systematic bolting",
-            "bolting": "Systematic bolts in crown spaced 2m, occasional wire mesh",
-            "shotcrete": "40-100mm where needed"
-        }
-    elif q > 1:
-        return {
-            "support_type": "Systematic bolting with shotcrete",
-            "bolting": "Systematic bolts spaced 1-1.5m with wire mesh in crown and sides",
-            "shotcrete": "50-90mm in crown and 30mm on sides"
-        }
-    else:
-        return {
-            "support_type": "Heavy support",
-            "bolting": "Systematic bolts spaced 1m with wire mesh",
-            "shotcrete": "90-120mm in crown and 100mm on sides",
-            "additional": "Consider steel ribs, forepoling, or face support"
-        }
-
 @tool
 def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, groundwater: int, orientation: int) -> Dict:
-    """Calculate Rock Mass Rating (RMR) classification.
-    Args:
-        ucs: Uniaxial compressive strength in MPa
-        rqd: Rock Quality Designation as percentage
-        spacing: Joint spacing in meters
-        condition: Joint condition rating (0-30)
-        groundwater: Groundwater condition rating (0-15)
-        orientation: Joint orientation rating (-12-0)
-    Returns:
-        Dictionary containing RMR value, rock class, and component ratings
-    """
+    """Calculate Rock Mass Rating (RMR) classification."""
     if ucs > 250: ucs_rating = 15
     elif ucs > 100: ucs_rating = 12
     elif ucs > 50: ucs_rating = 7
@@ -248,17 +164,7 @@ def calculate_rmr(ucs: float, rqd: float, spacing: float, condition: int, ground
 
 @tool
 def calculate_q_system(rqd: float, jn: float, jr: float, ja: float, jw: float, srf: float) -> Dict:
-    """Calculate Q-system rating and support requirements.
-    Args:
-        rqd: Rock Quality Designation as percentage
-        jn: Joint set number
-        jr: Joint roughness number
-        ja: Joint alteration number
-        jw: Joint water reduction factor
-        srf: Stress Reduction Factor
-    Returns:
-        Dictionary containing Q-value and support recommendations
-    """
+    """Calculate Q-system rating and support requirements."""
     q_value = (rqd/jn) * (jr/ja) * (jw/srf)
     if q_value > 40: quality = "Exceptionally Good"
     elif q_value > 10: quality = "Very Good"
@@ -279,16 +185,7 @@ def calculate_q_system(rqd: float, jn: float, jr: float, ja: float, jw: float, s
 
 @tool
 def estimate_tbm_performance(ucs: float, rqd: float, joint_spacing: float, abrasivity: float, diameter: float) -> Dict:
-    """Estimate TBM performance parameters.
-    Args:
-        ucs: Uniaxial compressive strength in MPa
-        rqd: Rock Quality Designation as percentage
-        joint_spacing: Average joint spacing in meters
-        abrasivity: Cerchar abrasivity index
-        diameter: TBM diameter in meters
-    Returns:
-        Dictionary containing TBM performance estimates
-    """
+    """Estimate TBM performance parameters."""
     pr = 20 * (1/ucs) * (rqd/100) * (1/abrasivity)
     utilization = 0.85 - (0.01 * (abrasivity/2))
     advance_rate = pr * utilization * 24
@@ -301,239 +198,20 @@ def estimate_tbm_performance(ucs: float, rqd: float, joint_spacing: float, abras
         "estimated_completion_days": round(1000/advance_rate, 0)
     }
 
-@tool
-def analyze_face_stability(depth: float, diameter: float, soil_density: float, cohesion: float, friction_angle: float, water_table: float) -> str:
-    """Analyze tunnel face stability.
-    Args:
-        depth: Tunnel depth in meters
-        diameter: Tunnel diameter in meters
-        soil_density: Soil density in kg/m³
-        cohesion: Soil cohesion in kPa
-        friction_angle: Soil friction angle in degrees
-        water_table: Water table depth from surface in meters
-    Returns:
-        Formatted string containing stability analysis results
-    """
-    g = 9.81
-    sigma_v = depth * soil_density * g / 1000
-    water_pressure = (depth - water_table) * 9.81 if water_table < depth else 0
-    N = (sigma_v - water_pressure) * math.tan(math.radians(friction_angle)) + cohesion
-    fs = N / (0.5 * soil_density * g * diameter / 1000)
-    return json.dumps({
-        "stability_ratio": round(N, 2),
-        "factor_of_safety": round(fs, 2), 
-        "water_pressure": round(water_pressure, 2),
-        "support_pressure_required": round(sigma_v/fs, 2) if fs < 1.5 else 0
-    })
-
-@tool
-def import_borehole_data(file_path: str) -> Dict:
-    """Import and process borehole data.
-    Args:
-        file_path: Path to borehole data CSV file
-    Returns:
-        Dictionary containing processed borehole data
-    """
-    try:
-        df = pd.read_csv(file_path)
-        required_columns = ['depth', 'soil_type', 'N_value', 'moisture']
-        if not all(col in df.columns for col in required_columns):
-            raise ValueError("Missing required columns in borehole data")
-        return {
-            "total_depth": df['depth'].max(),
-            "soil_layers": df['soil_type'].nunique(),
-            "ground_water_depth": df[df['moisture'] > 50]['depth'].min(),
-            "average_N_value": df['N_value'].mean(),
-            "soil_profile": df.groupby('soil_type')['depth'].agg(['min', 'max']).to_dict()
-        }
-    except Exception as e:
-        logging.error(f"Error processing borehole data: {e}")
-        raise
-
-@tool
-def visualize_3d_results(coordinates: str, geology_data: str, analysis_data: str) -> Dict:
-    """Create 3D visualization of tunnel and analysis results.
-    Args:
-        coordinates: JSON string of tunnel coordinates in format [[x1,y1,z1], [x2,y2,z2], ...] 
-        geology_data: JSON string of geological layers containing type, color and bounds
-        analysis_data: JSON string with stability analysis results including factor of safety
-    Returns:
-        Dict containing plot data (Plotly figure) and statistics (length, depth, critical sections)
-    """
-    tunnel_path = json.loads(coordinates)
-    geology = json.loads(geology_data)
-    analysis_results = json.loads(analysis_data)
-    fig = go.Figure()
-    x, y, z = zip(*tunnel_path)
-    # Tunnel alignment and stability analysis
-    fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='lines', name='Tunnel Alignment'))
-    fig.add_trace(go.Scatter3d(
-        x=x, y=y, z=z,
-        mode='markers',
-        marker=dict(
-            size=5,
-            color=[r['factor_of_safety'] for r in analysis_results['stability']],
-            colorscale='Viridis',
-            showscale=True,
-            colorbar=dict(title='Factor of Safety')
-        ),
-        name='Stability Analysis'
-    ))
-    # Add geology layers
-    for layer in geology:
-        fig.add_trace(go.Surface(
-            x=layer['bounds']['x'],
-            y=layer['bounds']['y'],
-            z=layer['bounds']['z'],
-            colorscale=[[0, layer['color']], [1, layer['color']]],
-            showscale=False,
-            name=layer['type'],
-            opacity=0.6
-        ))
-    fig.update_layout(
-        scene=dict(aspectmode='data'),
-        margin=dict(l=0, r=0, b=0, t=30)
-    )
-    stats = {
-        "tunnel_length": sum(math.sqrt((x[i]-x[i-1])**2 + (y[i]-y[i-1])**2 + (z[i]-z[i-1])**2)
-                             for i in range(1, len(x))),
-        "depth_range": [min(z), max(z)],
-        "critical_sections": [i for i, r in enumerate(analysis_results['stability'])
-                              if r['factor_of_safety'] < 1.5]
-    }
-    return {"plot": fig.to_dict(), "statistics": stats}
-
-@tool
-def calculate_tbm_penetration(alpha: float, fracture_spacing: float, peak_slope: float, csm_rop: float) -> Dict:
-    """Calculate TBM Rate of Penetration using advanced formula.
-    Args:
-        alpha: Angle between tunnel axis and weakness plane
-        fracture_spacing: Fracture spacing
-        peak_slope: Peak slope from punch tests
-        csm_rop: CSM model basic ROP
-    """
-    rfi = 1.44 * math.log(alpha) - 0.0187 * fracture_spacing
-    bi = 0.0157 * peak_slope
-    rop = 0.859 - rfi + bi + 0.0969 * csm_rop
-    return {"penetration_rate": rop}
-
-@tool
-def calculate_cutter_specs(max_speed: float, cutter_diameter: float) -> Dict:
-    """Calculate cutter head specs including RPM and power requirements.
-    Args:
-        max_speed: Maximum cutting speed
-        cutter_diameter: Diameter of cutter
-    """
-    rpm = max_speed / (math.pi * cutter_diameter)
-    return {
-        "rpm": rpm,
-        "max_speed": max_speed,
-        "diameter": cutter_diameter
-    }
-
-@tool
-def calculate_specific_energy(normal_force: float, spacing: float, penetration: float, rolling_force: float, tip_angle: float) -> Dict:
-    """Calculate specific energy for disc cutters.
-    Args:
-        normal_force: Normal force on cutter
-        spacing: Spacing between cutters
-        penetration: Penetration per revolution
-        rolling_force: Rolling force
-        tip_angle: Angle of cutter tip in radians
-    """
-    se = (normal_force / (spacing * penetration)) * (1 + (rolling_force/normal_force) * math.tan(tip_angle))
-    return {"specific_energy": se}
-
-@tool
-def predict_cutter_life(ucs: float, penetration: float, rpm: float, diameter: float, cai: float, constants: Dict[str, float]) -> Dict:
-    """Predict cutter life using empirical relationship.
-    Args:
-        ucs: Uniaxial compressive strength
-        penetration: Penetration rate
-        rpm: Cutterhead revolution speed
-        diameter: Tunnel diameter
-        cai: Cerchar abrasivity index
-        constants: Dictionary of C1-C6 constants
-    """
-    cl = (constants['C1'] * (ucs ** constants['C2'])) / \
-         ((penetration ** constants['C3']) * (rpm ** constants['C4']) * \
-          (diameter ** constants['C5']) * (cai ** constants['C6']))
-    return {"cutter_life_m3": cl}
-
-@st.cache_resource
-def initialize_agents():
-    try:
-        hf_key = st.secrets["HUGGINGFACE_API_KEY"]
-        login(hf_key)
-        model = HfApiModel("Qwen/Qwen2.5-Coder-32B-Instruct")  # Updated to Qwen model <button class="citation-flag" data-index="4">
-        # Web search agent
-        web_agent = ToolCallingAgent(
-            tools=[search_geotechnical_data, visit_webpage],
-            model=model,
-            max_steps=10
-        )
-        managed_web_agent = ManagedAgent(
-            agent=web_agent,
-            name="geotech_web_search",
-            description="Performs web searches for geotechnical data."
-        )
-        # Geotech calculation agent
-        geotech_agent = ToolCallingAgent(
-            tools=[
-                classify_soil,
-                calculate_tunnel_support,
-                calculate_rmr,
-                calculate_q_system,
-                estimate_tbm_performance,
-                analyze_face_stability,
-                import_borehole_data,
-                visualize_3d_results,
-                calculate_tbm_penetration,
-                calculate_cutter_specs,
-                calculate_specific_energy,
-                predict_cutter_life
-            ],
-            model=model,
-            max_steps=10
-        )
-        managed_geotech_agent = ManagedAgent(
-            agent=geotech_agent,
-            name="geotech_analysis",
-            description="Performs geotechnical calculations."
-        )
-        # Manager agent with search_geotechnical_data tool
-        manager_agent = CodeAgent(
-            tools=[search_geotechnical_data],
-            model=model,
-            managed_agents=[managed_web_agent, managed_geotech_agent],
-            additional_authorized_imports=["time", "numpy", "pandas"]
-        )
-        return managed_web_agent, managed_geotech_agent, manager_agent
-    except Exception as e:
-        st.error(f"Failed to initialize agents: {str(e)}\nFull traceback:\n{traceback.format_exc()}")
-        return None, None, None
-
 def generate_detailed_response(query: str, web_results: str) -> str:
     """
     Generates a detailed response based on the query and web search results.
     Includes citations, equations, and longer contextual explanations.
-    Args:
-        query: The user's question.
-        web_results: Results from the web search.
-    Returns:
-        A detailed response with citations and equations.
     """
-    # Extract relevant information from web results
     response = (
         f"Based on recent research and industry standards in geotechnical engineering, tunnelling, "
         f"and related fields, here is the information regarding your query:\n\n"
     )
-
-    # Append relevant details from web search results
+    
     if "specific energy" in query.lower():
         response += (
             "Specific energy is a critical parameter in tunnel boring machine (TBM) operations. "
-            "It is defined as the amount of energy required to excavate a unit volume of rock or soil <button class="citation-flag" data-index="1">.\n\n"
+            "It is defined as the amount of energy required to excavate a unit volume of rock or soil.\n\n"
         )
         # Add equation for specific energy
         response += (
@@ -556,7 +234,7 @@ def generate_detailed_response(query: str, web_results: str) -> str:
         response += (
             "The Rock Mass Rating (RMR) system is widely used to classify the quality of rock masses. "
             "It considers parameters such as uniaxial compressive strength (UCS), Rock Quality Designation (RQD), "
-            "joint spacing, joint condition, groundwater conditions, and joint orientation <button class="citation-flag" data-index="3">.\n\n"
+            "joint spacing, joint condition, groundwater conditions, and joint orientation.\n\n"
         )
         # Add equation for RMR calculation
         response += (
@@ -568,36 +246,81 @@ def generate_detailed_response(query: str, web_results: str) -> str:
             "For example, a rock mass with high UCS, excellent RQD, wide joint spacing, and favorable orientation "
             "would result in a high RMR value, indicating very good rock quality.\n\n"
         )
+    elif "q-system" in query.lower():
+        response += (
+            "The Q-system is another widely used method for rock mass classification. It is calculated using the following formula:\n\n"
+            "\\[ Q = \\left(\\frac{RQD}{J_n}\\right) \\cdot \\left(\\frac{J_r}{J_a}\\right) \\cdot \\left(\\frac{J_w}{SRF}\\right) \\]\n\n"
+            "Where:\n"
+            "- \(RQD\) is the Rock Quality Designation,\n"
+            "- \(J_n\) is the joint set number,\n"
+            "- \(J_r\) is the joint roughness number,\n"
+            "- \(J_a\) is the joint alteration number,\n"
+            "- \(J_w\) is the joint water reduction factor,\n"
+            "- \(SRF\) is the stress reduction factor.\n\n"
+        )
+        response += (
+            "The Q-value is then used to determine the support requirements for tunnels and underground excavations.\n\n"
+        )
+    elif "tunnel boring machine" in query.lower() or "tbm" in query.lower():
+        response += (
+            "Tunnel Boring Machines (TBMs) are advanced mechanical systems used for excavating tunnels through various types of ground, "
+            "including rock, soil, and mixed-face conditions. Key performance metrics for TBMs include penetration rate, advance rate, "
+            "utilization, and cutter life.\n\n"
+        )
+        # Add equation for penetration rate
+        response += (
+            "The penetration rate (\(PR\)) of a TBM can be estimated using empirical models, such as:\n\n"
+            "\\[ PR = C_1 \\cdot \\frac{RQD}{UCS} \\cdot \\frac{1}{CAI} \\]\n\n"
+            "Where:\n"
+            "- \(C_1\) is an empirical constant,\n"
+            "- \(RQD\) is the Rock Quality Designation,\n"
+            "- \(UCS\) is the Uniaxial Compressive Strength of the rock,\n"
+            "- \(CAI\) is the Cerchar Abrasivity Index.\n\n"
+        )
+        response += (
+            "For example, a TBM operating in rock with \(RQD = 75\), \(UCS = 100 \, \\text{MPa}\), and \(CAI = 2\) "
+            "might achieve a penetration rate of:\n\n"
+            "\\[ PR = 20 \\cdot \\frac{75}{100} \\cdot \\frac{1}{2} = 7.5 \\, \\text{mm/rev} \\]\n\n"
+        )
+    elif "groundwater" in query.lower():
+        response += (
+            "Groundwater conditions play a critical role in geotechnical engineering, particularly in tunnelling and excavation projects. "
+            "High groundwater pressures can lead to instability, increased excavation costs, and safety risks.\n\n"
+        )
+        # Add equation for groundwater pressure
+        response += (
+            "The groundwater pressure (\(P_w\)) at a given depth (\(z\)) can be calculated using the hydrostatic pressure equation:\n\n"
+            "\\[ P_w = \\gamma_w \\cdot z \\]\n\n"
+            "Where:\n"
+            "- \(\\gamma_w\) is the unit weight of water (\(9.81 \\, \\text{kN/m³}\)),\n"
+            "- \(z\) is the depth below the water table (in meters).\n\n"
+        )
+        response += (
+            "For example, at a depth of 20 meters below the water table, the groundwater pressure would be:\n\n"
+            "\\[ P_w = 9.81 \\cdot 20 = 196.2 \\, \\text{kPa} \\]\n\n"
+        )
     else:
         # General response for other queries
         response += f"{web_results}\n\n"
-
+    
     # Append references
     response += (
         "**References:**\n"
-        "[1] Identification and optimization of energy consumption by shield machines <button class="citation-flag" data-index="1">.\n"
+        "[1] Identification and optimization of energy consumption by shield machines <button class="citation-flag" data-index="6">.\n"
         "[2] Estimating TBM Specific Energy by Employing the Rock Mass Parameters <button class="citation-flag" data-index="2">.\n"
         "[3] Estimation of the specific energy of tunnel boring machines <button class="citation-flag" data-index="3">.\n"
-        "[4] Use of specific drilling energy for rock mass characterization <button class="citation-flag" data-index="5">.\n"
+        "[4] Use of specific drilling energy for rock mass characterization <button class="citation-flag" data-index="4">.\n"
+        "[5] Combining the RMR, Q and RMi classification systems <button class="citation-flag" data-index="7">.\n"
+        "[6] Geotechnical Challenges in Tunnelling Projects <button class="citation-flag" data-index="10">.\n"
     )
-
+    
     return response
 
 def process_request(request: str):
-    """
-    Processes the user's request and generates a detailed response.
-    Args:
-        request: The user's question.
-    Returns:
-        A detailed response with citations and equations.
-    """
+    """Processes the user's request and generates a detailed response."""
     try:
-        # Perform a focused web search
         web_result = search_geotechnical_data(request)
-
-        # Generate a detailed response
         detailed_response = generate_detailed_response(request, web_result)
-
         return detailed_response
     except Exception as e:
         return f"Error: {str(e)}\nFull traceback:\n{traceback.format_exc()}"
@@ -676,16 +399,6 @@ with st.sidebar:
                     st.session_state.analysis_params["diameter"]
                 )
 
-def display_chat_message(msg):
-    try:
-        role_icon = "🧑" if msg["role"] == "user" else "🤖"
-        content = msg["content"]
-        if isinstance(content, (dict, list)):
-            content = json.dumps(content, indent=2)
-        st.markdown(f"{role_icon} **{msg['role'].title()}:** {content}")
-    except Exception as e:
-        st.error(f"Error displaying message: {str(e)}")
-
 # Main content
 st.title("🏗️ Geotechnical AI Agent by Qwen2.5-Coder-32B-Instruct")
 st.subheader("💬 Chat Interface")
@@ -700,7 +413,14 @@ if user_input:
 chat_container = st.container()
 with chat_container:
     for msg in st.session_state.chat_history:
-        display_chat_message(msg)
+        try:
+            role_icon = "🧑" if msg["role"] == "user" else "🤖"
+            content = msg["content"]
+            if isinstance(content, (dict, list)):
+                content = json.dumps(content, indent=2)
+            st.markdown(f"{role_icon} **{msg['role'].title()}:** {content}", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error displaying message: {str(e)}")
 
 # Analysis Results Section
 st.subheader("📊 Analysis Results")
