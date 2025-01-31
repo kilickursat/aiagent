@@ -529,7 +529,11 @@ def initialize_agents():
         hf_key = st.secrets["HUGGINGFACE_API_KEY"]
         login(hf_key)
         
-        model = HfApiModel("mistralai/Mistral-Small-24B-Instruct-2501") #  deepseek-ai/DeepSeek-V3 # mistralai/Mistral-Nemo-Instruct-2407
+        #model = HfApiModel("mistralai/Mistral-Small-24B-Instruct-2501") #  deepseek-ai/DeepSeek-V3 # mistralai/Mistral-Nemo-Instruct-2407
+        model = HfApiModel(
+            model_name="mistralai/Mistral-Small-24B-Instruct-2501",
+            variant="text-generation-inference"  # Official HF variant
+        )
         
         # Web search agent
         web_agent = ToolCallingAgent(
